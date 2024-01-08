@@ -181,6 +181,13 @@ void File::close() {
         fileStatistics.write(m_compressedFile);
         m_compressedFile.close();
     }
+
+    if (m_compressedFileThreadException) {
+        std::rethrow_exception(m_compressedFileThreadException);
+    }
+    if (m_uncompressedFileThreadException) {
+        std::rethrow_exception(m_uncompressedFileThreadException);
+    }
 }
 
 uint32_t File::defaultLogContainerSize() const {
@@ -733,6 +740,11 @@ void File::uncompressedFile2ReadWriteQueue() {
         m_uncompressedFile.seekg(tmp);
     }
 
+    if (obj->calculateObjectSize() < obj->objectSize) {
+        /* advance file pointer if the actual read object size is smaller */
+        m_uncompressedFile.seekg(obj->objectSize - obj->calculateObjectSize());
+    }
+
     /* push data into readWriteQueue */
     m_readWriteQueue.write(obj);
 
@@ -834,6 +846,7 @@ void File::uncompressedFileReadThread(File * file) {
                 file->uncompressedFile2ReadWriteQueue();
             } catch (Vector::BLF::Exception &) {
                 file->m_uncompressedFileThreadRunning = false;
+                file->m_uncompressedFileThreadException = std::current_exception();
             }
 
             /* check for eof */

@@ -201,7 +201,8 @@ void UncompressedFile::write(const std::shared_ptr<LogContainer> & logContainer)
     tellgChanged.wait(lock, [&] {
         return
         m_abort ||
-        static_cast<uint32_t>(m_tellp - m_tellg) < m_bufferSize;
+        /* m_tellg can get larger if using seekg */
+        ((m_tellp - m_tellg) < m_bufferSize);
     });
 
     /* append logContainer */
